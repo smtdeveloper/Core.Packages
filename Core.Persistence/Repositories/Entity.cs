@@ -18,6 +18,7 @@ public class Entity<TId>
         Id = default;
     }
 
+
     public Entity(TId id)
     {
         Id = id;
