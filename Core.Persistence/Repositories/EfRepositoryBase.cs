@@ -61,10 +61,7 @@ public class EfRepositoryBase<TEntity, TEntityId, TContext>
 
     public async Task<ICollection<TEntity>> DeleteRangeAsync(ICollection<TEntity> entities, bool permanent = false)
     {
-        foreach (TEntity entity in entities)
-        {
-            await SetEntityAsDeletedAsync(entity, permanent);
-        }
+        await SetEntityAsDeletedAsync(entities, permanent);
         await Context.SaveChangesAsync();
         return entities;
     }
@@ -84,21 +81,18 @@ public class EfRepositoryBase<TEntity, TEntityId, TContext>
 
     public async Task<Paginate<TEntity>> GetListAsync(Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool withDeleted = false, bool enableTracking = true, CancellationToken cancellationToken = default)
     {
-        IQueryable<TEntity> query = Query();
+        IQueryable<TEntity> queryable = Query();
         if (!enableTracking)
-            query = query.AsNoTracking();
-        if (withDeleted)
-            query = query.IgnoreQueryFilters();
-        if (predicate != null)
-            query = query.Where(predicate);
+            queryable = queryable.AsNoTracking();
         if (include != null)
-            query = include(query);
+            queryable = include(queryable);
+        if (withDeleted)
+            queryable = queryable.IgnoreQueryFilters();
+        if (predicate != null)
+            queryable = queryable.Where(predicate);
         if (orderBy != null)
-            query = orderBy(query);
-        else
-            query = query.OrderBy(e => e.Id); // Default ordering by Id
-
-        return await query.ToPaginateAskkync(index, size, cancellationToken);
+            return await orderBy(queryable).ToPaginateAsync(index, size, cancellationToken);
+        return await queryable.ToPaginateAsync(index, size, cancellationToken);
     }
 
     public async Task<Paginate<TEntity>> GetListByDynamicAsync(DynamicQuery dynamic, Expression<Func<TEntity, bool>>? predicate = null, Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, int index = 0, int size = 10, bool withDeleted = false, bool enableTracking = true, CancellationToken cancellationToken = default)
@@ -113,7 +107,7 @@ public class EfRepositoryBase<TEntity, TEntityId, TContext>
         if (include != null)
             query = include(query);
 
-        return await query.ToPaginateAskkync(index, size, cancellationToken);
+        return await query.ToPaginateAsync(index, size, cancellationToken);
     }
 
     public IQueryable<TEntity> Query()
